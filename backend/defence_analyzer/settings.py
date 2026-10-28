@@ -57,9 +57,14 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-# Support large telemetry files up to 50MB
-DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800
-FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800
+# Support massive telemetry uploads: 1000+ files, up to 500MB total
+DATA_UPLOAD_MAX_MEMORY_SIZE = 524288000       # 500MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 524288000       # 500MB
+DATA_UPLOAD_MAX_NUMBER_FILES = 5000           # Allow up to 5000 files per upload
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 50000         # Allow many form fields
+FILE_UPLOAD_HANDLERS = [
+    'django.core.files.uploadhandler.TemporaryFileUploadHandler',
+]
 
 # CORS settings to allow requests from Vite dev server
 CORS_ALLOW_ALL_ORIGINS = True

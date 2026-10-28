@@ -1,6 +1,6 @@
 {
   "name": "Defence Test Data Analyzer",
-  "description": "Enterprise-grade engineering test data analysis, schema discovery, timestamp alignment, and Gemini AI insights for defence component telemetry.",
+  "description": "Offline telemetry graph studio: upload one or many defence CSV files and generate interval-sampled graphs (points on every 5th timestamp) plus a full-resolution all-timestamps graph — per-attribute or overlay views, fully offline.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": ["MAJOR_CAPABILITY_FILE_UPLOAD_GRAPHING"]
 }
