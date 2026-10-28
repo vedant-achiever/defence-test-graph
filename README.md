@@ -1,80 +1,84 @@
-# Defence Test Data Analyzer
+# Defence Test Data Analyzer — Telemetry Graph Studio
 
-A high-performance defence telemetry analyzer with a **Python (Django 5)** backend, local **Qwen2.5 Chat** & **BGE-M3** AI engines, and a zero-dependency mission-control frontend (`index.html`).
+A focused, **fully offline** program for defence telemetry:
 
----
+1. **Upload tabs**
+   - **Single File** — upload one CSV → generate its professional graph.
+   - **Multiple Files — Combine** — upload two or more CSVs → they are combined into one chronological dataset → one merged graph.
+2. **Interval-sampled graphs** — graph data for **all selected attributes** is sampled at an
+   interval of timestamps (default **5** → points at timestamp indices **#1, #6, #11, #16, …**).
+3. **Points on every graph** — every sampled timestamp renders as a **visible point** with its
+   **timestamp + attribute value** on hover, plus an interval sample table listing each point.
+4. **Any number of attributes** — each attribute gets its own elegant per-attribute chart
+   (small multiples), or view everything together in **Overlay** (shared / per-series independent
+   value axes, chosen automatically by scale spread).
+5. **All Timestamps tab (third tab)** — a **full-resolution** graph with **every timestamp on the
+   X-axis** and the **selected attribute values on the Y-axis** (no interval sampling). It reuses
+   either the **single-file pick from Tab 1** or the **combined set from Tab 2**, whichever source
+   the user chooses, and plots every timestamp of that source.
 
-## Prerequisites
-
-- **Python**: `3.10` or `3.11+`
-- **RAM**: Minimum 4 GB (8 GB recommended for local LLM inference)
+Python stdlib backend (`server.py`, zero dependencies) + offline Chart.js 4 frontend (`index.html`).
 
 ---
 
 ## Quick Start
 
-### 1. Setup Virtual Environment & Dependencies
-
 ```bash
-# Create and activate virtual environment
-python3 -m venv .venv
-source .venv/bin/activate   # On Windows: .venv\Scripts\activate
-
-# Install required packages
-pip install -r requirements.txt
+# From the project folder
+python3 server.py
 ```
 
-### 2. Start the Server
+Open in a browser:
 
-```bash
-python backend/manage.py runserver 8000
+```
+http://127.0.0.1:8001
 ```
 
-> **Important**: The server must run on port **`8000`** (`http://127.0.0.1:8000`) for the frontend telemetry API to communicate.
-
-### 3. Open the Application
-
-Open your browser and go to:
-```
-http://127.0.0.1:8000
-```
+*(Different port: `PORT=9000 python3 server.py`)*
 
 ---
 
-## AI Models (`models/`)
+## How the graph logic works
 
-The local AI engine stores quantized GGUF models in the `models/` folder:
+- CSVs are parsed with support for **FastLog** headers and defence datetime formats:
+  - `6:6:2026 12:30:49:694` → `D:M:YYYY HH:MM:SS:ms`
+  - `25-02-2026 10:02:24:254` → `DD-MM-YYYY HH:MM:SS:ms`
+  - ISO / standard fallbacks
+- Numeric columns are auto-detected (≥ 60 % numeric sample) and offered as attribute chips.
+- Rows of all selected files are sorted by timestamp.
+- Sampling: for interval **N**, graph points are taken at 1-based timestamp indices
+  **1, 1+N, 1+2N, …** (so N = 5 → `#1, #6, #11, …`).
+- Every point carries **{timestamp, source file, value of each selected attribute}**
+  — surfacing as chart points, rich tooltips, and an interval sample table.
 
-| Model | File | Function |
-| :--- | :--- | :--- |
-| **Qwen2.5-0.5B-Instruct** | `qwen2.5-0.5b-instruct-q4_k_m.gguf` | Interactive AI Chat assistant (Aegis) |
-| **BAAI/BGE-M3** | `bge-m3-q4_k_m.gguf` | Semantic telemetry ranking & anomaly retrieval |
+## Tabs
 
-*Models download automatically if missing when triggered by the backend.*
+| Tab | What it does |
+| :--- | :--- |
+| **Single File** | Upload exactly one CSV, pick attributes + interval, generate its graph. |
+| **Multiple Files — Combine** | Upload many CSVs (all default-selected in the checkbox list); press Generate to combine and graph them together. |
+| **All Timestamps** | Same session, **no sampling** — every timestamp of the chosen source (a single file like Tab 1, or the combined set like Tab 2) is plotted: timestamps on X, attribute values on Y. Point dots and animation adapt automatically to dataset density. |
 
----
+Both tabs also provide: per-attribute statistic cards (Min / Max / Mean / Count),
+a **Points · per attribute** ↔ **Overlay** view switch, and the collapsible interval sample table.
 
 ## Key Endpoints
 
 | Endpoint | Method | Purpose |
 | :--- | :--- | :--- |
-| `/` | `GET` | Serves the Mission Control dashboard (`index.html`) |
-| `/api/health` | `GET` | Checks backend and AI model loading status |
-| `/api/gemini/chat` | `POST` | Processes interactive chat with Qwen2.5 |
-| `/api/gemini/analyze` | `POST` | Generates engineering reports using BGE-M3 |
+| `/` | `GET` | Serves the Telemetry Graph Studio frontend |
+| `/api/health` | `GET` | Server status + time |
+| `/api/upload` | `POST` | Multipart CSV upload (`X-Session-ID` header) |
+| `/api/files?session=` | `GET` | Uploaded files + union of numeric columns |
+| `/api/graph` | `POST` | Graph data `{session_id, file_ids, attributes, interval}` — add `"full": true` for every-timestamp data |
+| `/api/preview?session=&file_id=` | `GET` | First rows of a parsed file |
+| `/api/reset` | `POST` | Clears a session |
 
 ---
 
 ## Troubleshooting
 
-- **Server Port in Use**: If port 8000 is occupied, free it using `lsof -ti :8000 | xargs kill -9` before starting.
-- **Model Check**: Verify AI status at `http://127.0.0.1:8000/api/health`.
-- **Large Files**: The backend supports file uploads up to 50 MB by default.
-
-## git hub project update 
-- **git add .**
-- **git commit -m "first commit"**
-- **git push -u origin main**
-
-# CSV-files-compilation-analysis
-# CSV-files-compilation-analysis
+- **Port busy**: run `lsof -ti :8000 | xargs kill -9` (or use `PORT=9000`).
+- **Chart.js missing**: confirm `static/js/chart.min.js` and `static/js/chartjs-adapter-date-fns.min.js` exist.
+- **Files up to 100 MB** are accepted per upload request.
+# defence-test-graph
